@@ -40,7 +40,14 @@ Config::Config(const std::string& path)
 	ifstream f(path.c_str());
 	if (!f)
 	{
-		cout << "error: could not load config file: " << path << endl;
+		FeatureKernelPair fkp;
+		
+		fkp.feature = kFeatureTypeHaar;
+		fkp.kernel = kKernelTypeGaussian;
+		fkp.params.push_back(0.2);
+		
+		features.push_back(fkp);
+
 		return;
 	}
 	
@@ -110,19 +117,19 @@ void Config::SetDefaults()
 {
 
 	quietMode = false;
-	debugMode = false;
+	debugMode = true;
 	
 	sequenceBasePath = "";
 	sequenceName = "";
 	resultsPath = "";
 	
-	frameWidth = 320;
-	frameHeight = 240;
+	frameWidth = 1024;
+	frameHeight = 768;
 	
 	seed = 0;
 	searchRadius = 30;
 	svmC = 1.0;
-	svmBudgetSize = 0;
+	svmBudgetSize = 100;
 	
 	features.clear();
 }

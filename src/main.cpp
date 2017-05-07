@@ -32,13 +32,15 @@
 #include <fstream>
 
 #include <opencv/cv.h>
+#include <Eigen/Core>
 #include <opencv/highgui.h>
 
 using namespace std;
 using namespace cv;
+using namespace Eigen;
 
-static const int kLiveBoxWidth = 80;
-static const int kLiveBoxHeight = 80;
+static const int kLiveBoxWidth = 150;
+static const int kLiveBoxHeight = 150;
 
 void rectangle(Mat& rMat, const FloatRect& rRect, const Scalar& rColour)
 {
@@ -101,7 +103,9 @@ int main(int argc, char* argv[])
 		scaleH = (float)conf.frameHeight/tmp.rows;
 
 		initBB = IntRect(conf.frameWidth/2-kLiveBoxWidth/2, conf.frameHeight/2-kLiveBoxHeight/2, kLiveBoxWidth, kLiveBoxHeight);
-		cout << "press 'i' to initialise tracker" << endl;
+		cout << "press 'i' to initialise tracker"<<endl;
+		cout << "press 's' to take current frame as ground truth" << endl;
+		cout << "press 't' to start tracking" << endl;
 	}
 	else
 	{
@@ -165,7 +169,9 @@ int main(int argc, char* argv[])
 	Mat result(conf.frameHeight, conf.frameWidth, CV_8UC3);
 	bool paused = false;
 	bool doInitialise = false;
+	bool takeGround = false;
 	srand(conf.seed);
+	tracker.Reset();
 	for (int frameInd = startFrame; frameInd <= endFrame; ++frameInd)
 	{
 		Mat frame;
@@ -178,19 +184,12 @@ int main(int argc, char* argv[])
 			frame.copyTo(result);
 			if (doInitialise)
 			{
-				if (tracker.IsInitialised())
-				{
-					tracker.Reset();
-				}
-				else
-				{
+				if(takeGround)
 					tracker.Initialise(frame, initBB);
-				}
-				doInitialise = false;
-			}
-			else if (!tracker.IsInitialised())
-			{
-				rectangle(result, initBB, CV_RGB(255, 255, 255));
+
+				takeGround = false;
+
+				rectangle(result, initBB, CV_RGB(0, 0, 0));
 			}
 		}
 		else
@@ -212,9 +211,9 @@ int main(int argc, char* argv[])
 			}
 		}
 		
-		if (tracker.IsInitialised())
+		if (!doInitialise && tracker.IsInitialised())
 		{
-			tracker.Track(frame);
+			tracker.Track(frame, Point(conf.frameWidth, conf.frameHeight), Point(kLiveBoxWidth, kLiveBoxHeight));
 			
 			if (!conf.quietMode && conf.debugMode)
 			{
@@ -236,7 +235,7 @@ int main(int argc, char* argv[])
 			int key = waitKey(paused ? 0 : 1);
 			if (key != -1)
 			{
-				if (key == 27 || key == 113) // esc q
+				if (key == 27) // esc
 				{
 					break;
 				}
@@ -247,6 +246,12 @@ int main(int argc, char* argv[])
 				else if (key == 105 && useCamera)
 				{
 					doInitialise = true;
+				}
+				else if (key == 116 && useCamera){ //q
+					doInitialise = false;
+				}
+				else if (key == 115 && useCamera){//d
+					takeGround = true;
 				}
 			}
 			if (conf.debugMode && frameInd == endFrame)
